@@ -33,6 +33,44 @@ def find_latest_model():
         Path("ml/mlruns"),
     ]
     
+    # First, try using MLflow API to find the latest run
+    tracking_uri = None
+    for base_path in possible_paths:
+        if base_path.exists():
+            tracking_uri = f"file:{base_path.absolute()}"
+            break
+    
+    if tracking_uri:
+        try:
+            mlflow.set_tracking_uri(tracking_uri)
+            experiment_name = "mvp_lightgbm_price"
+            experiment = mlflow.get_experiment_by_name(experiment_name)
+            if experiment:
+                runs = mlflow.search_runs(
+                    experiment_ids=[experiment.experiment_id],
+                    order_by=["start_time DESC"],
+                    max_results=1
+                )
+                if len(runs) > 0:
+                    latest_run_id = runs.iloc[0]["run_id"]
+                    # Try to find the model in the run's artifacts
+                    run_path = None
+                    for base_path in possible_paths:
+                        if not base_path.exists():
+                            continue
+                        for exp_dir in base_path.iterdir():
+                            if not exp_dir.is_dir() or exp_dir.name == "0":
+                                continue
+                            run_dir = exp_dir / latest_run_id
+                            if run_dir.exists():
+                                artifacts_dir = run_dir / "artifacts" / "model"
+                                if artifacts_dir.exists():
+                                    return str(artifacts_dir)
+        except Exception:
+            # Fall back to file system search if MLflow API fails
+            pass
+    
+    # Fallback: search file system for latest run
     latest_run = None
     latest_end_time = 0
     
@@ -45,24 +83,23 @@ def find_latest_model():
             if not exp_dir.is_dir() or exp_dir.name == "0":
                 continue
                 
-            runs_dir = exp_dir / "models"
-            if not runs_dir.exists():
-                # Try runs directory instead
-                for run_dir in exp_dir.iterdir():
-                    if not run_dir.is_dir() or run_dir.name == "models" or run_dir.name == "meta.yaml":
-                        continue
-                    artifacts_dir = run_dir / "artifacts" / "model"
-                    if artifacts_dir.exists():
-                        meta_file = run_dir / "meta.yaml"
-                        if meta_file.exists():
-                            with open(meta_file) as f:
-                                meta = yaml.safe_load(f)
-                                end_time = meta.get("end_time", 0)
-                                if end_time > latest_end_time:
-                                    latest_end_time = end_time
-                                    latest_run = str(artifacts_dir)
+            # Check run directories first (prioritize actual runs over registered models)
+            for run_dir in exp_dir.iterdir():
+                if not run_dir.is_dir() or run_dir.name == "models" or run_dir.name == "meta.yaml":
+                    continue
+                artifacts_dir = run_dir / "artifacts" / "model"
+                if artifacts_dir.exists():
+                    meta_file = run_dir / "meta.yaml"
+                    if meta_file.exists():
+                        with open(meta_file) as f:
+                            meta = yaml.safe_load(f)
+                            end_time = meta.get("end_time", 0)
+                            if end_time and end_time > latest_end_time:
+                                latest_end_time = end_time
+                                latest_run = str(artifacts_dir)
             
-            # Check models directory
+            # Check models directory as fallback
+            runs_dir = exp_dir / "models"
             if runs_dir.exists():
                 for model_dir in runs_dir.iterdir():
                     artifacts_dir = model_dir / "artifacts"
@@ -80,7 +117,7 @@ def find_latest_model():
     if latest_run is None:
         raise RuntimeError(
             "No trained model found. Please train a model first using: "
-            "cd ml && python train.py --csv ../data/raw/mvp_quotes.csv"
+            "python -m ml.train --csv data/raw/mvp_quotes.csv"
         )
     
     return latest_run

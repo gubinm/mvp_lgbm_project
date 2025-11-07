@@ -7,7 +7,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
 
-from .features import FeatureBuilder, ImputeAndTypes
+# Note: FeatureBuilder and ImputeAndTypes are imported by the model pipeline
 from .schema import BaseQuote
 
 # Add ml directory to sys.path so that pickled models can find 'features' and 'schema' modules
@@ -84,10 +84,8 @@ app = FastAPI(
     ],
 )
 
-# Load model and initialize transformers
+# Load model (pipeline includes imputation and feature engineering)
 model = mlflow.sklearn.load_model(MODEL_URI)
-imputer = ImputeAndTypes()
-feats = FeatureBuilder()
 
 
 @app.get(
@@ -209,9 +207,8 @@ def predict(quotes: list[BaseQuote]) -> list[PredictionResponse]:
     if len(df) == 0:
         return []
 
-    X = imputer.fit_transform(df)
-    X = feats.fit_transform(X)
-    yhat = model.predict(X)
+    # Use the model pipeline directly (it includes imputation and feature engineering)
+    yhat = model.predict(df)
     return [
         PredictionResponse(target_unit_price_rub_pred=float(v)) for v in yhat
     ]
