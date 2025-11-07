@@ -1,6 +1,8 @@
 """Script to view MLFlow metrics from training runs."""
 
+import math
 import os
+import sys
 from pathlib import Path
 
 import mlflow
@@ -25,7 +27,7 @@ try:
     experiment = mlflow.get_experiment_by_name(experiment_name)
     if experiment is None:
         print(f"Experiment '{experiment_name}' not found.")
-        exit(1)
+        sys.exit(1)
 
     experiment_id = experiment.experiment_id
     print(f"Experiment: {experiment_name} (ID: {experiment_id})\n")
@@ -35,13 +37,13 @@ try:
 
     if len(runs) == 0:
         print("No runs found in this experiment.")
-        exit(1)
+        sys.exit(1)
 
     print(f"Found {len(runs)} run(s):\n")
     print("=" * 80)
 
     # Display metrics for each run
-    for idx, run in runs.iterrows():
+    for _, run in runs.iterrows():
         run_id = run["run_id"]
         run_name = run.get("tags.mlflow.runName", "N/A")
         start_time = run.get("start_time", "N/A")
@@ -58,7 +60,7 @@ try:
         for metric in metrics:
             value = run.get(f"metrics.{metric}", None)
             if value is not None and not (
-                isinstance(value, float) and (value != value)
+                isinstance(value, float) and math.isnan(value)
             ):  # Check for NaN
                 has_metrics = True
                 if metric == "mape":
@@ -81,4 +83,4 @@ try:
 
 except Exception as e:
     print(f"Error accessing MLFlow: {e}")
-    exit(1)
+    sys.exit(1)

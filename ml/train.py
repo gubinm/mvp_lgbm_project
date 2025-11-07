@@ -97,7 +97,7 @@ def get_params_from_run(run_id: str) -> dict:
     """Get hyperparameters from a specific MLflow run."""
     client = mlflow.tracking.MlflowClient()
     run_data = client.get_run(run_id)
-    
+
     params = {}
     for key, value in run_data.data.params.items():
         # Convert string values to appropriate types
@@ -108,7 +108,7 @@ def get_params_from_run(run_id: str) -> dict:
                 params[key] = int(value)
         except ValueError:
             params[key] = value
-    
+
     return params
 
 
@@ -127,7 +127,7 @@ def main(args):
         print(f"Using hyperparameters from run ID: {args.use_run_id}")
         try:
             best_params = get_params_from_run(args.use_run_id)
-            print(f"Loaded parameters from run:")
+            print("Loaded parameters from run:")
             for key, value in best_params.items():
                 print(f"  {key}: {value}")
             best_cv_rmse = None  # Not available when using existing run
@@ -145,11 +145,11 @@ def main(args):
             show_progress_bar=True,
         )
 
-        print(f"\nBest hyperparameters found:")
+        print("\nBest hyperparameters found:")
         for key, value in study.best_params.items():
             print(f"  {key}: {value}")
         print(f"Best CV RMSE: {study.best_value:.3f}\n")
-        
+
         best_params = study.best_params
         best_cv_rmse = study.best_value
 
@@ -184,7 +184,7 @@ def main(args):
             input_example=input_example,
             registered_model_name=os.getenv("MLFLOW_REGISTER_MODEL", None),
         )
-        print(f"Validation Metrics:")
+        print("Validation Metrics:")
         print(f"  RMSE: {rmse:.3f} | MAE: {mae:.3f} | MAPE: {mape:.2f}% | R2: {r2:.3f}")
         print(f"Run ID: {run.info.run_id}")
 
