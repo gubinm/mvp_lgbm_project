@@ -362,4 +362,74 @@ class FeatureBuilder(BaseEstimator, TransformerMixin):
         for bucket_col in ["qty_bucket", "thickness_bucket", "area_bucket", "volume_bucket", "due_bucket"]:
             if bucket_col in X.columns:
                 X[bucket_col] = X[bucket_col].astype("category")
+        
+        # Remove features with zero importance (identified from feature importance analysis)
+        # These features don't contribute to model performance
+        # Note: We keep original features like due_days and cut_length_mm even if they have zero importance
+        # because they're used to create other important features (rush, log_due_days, cut_ratio, etc.)
+        zero_importance_features = {
+            # Derived features with zero importance (safe to remove)
+            "has_cutting",
+            "has_welding",
+            "is_precise",
+            "is_high_precision",
+            "is_standard",
+            "has_anodized",
+            "is_laser_cut",
+            "is_plasma_cut",
+            "is_waterjet_cut",
+            "engineer_score_positive",
+            "thickness_bucket",
+            "engineer_score_low",
+            "material_density",
+            "is_steel",
+            "is_stainless",
+            "is_aluminum",
+            "area_bucket",
+            "engineer_score_high",
+            "qty_bucket",
+            "normal_lead",
+            "urgent",
+            "volume_squared",
+            "log_qty",
+            "qty_squared",
+            "log_volume",
+            "is_tier_c",
+            "has_coating",
+            "is_tier_a",
+            "is_tier_b",
+            "has_zinc",
+            "has_galvanized",
+            "has_surface_finish",
+            "has_powder",
+            "has_paint",
+            "plasma_labor",
+            "laser_labor",
+            "steel_cost",
+            "stainless_cost",
+            "aluminum_cost",
+            "area_thickness_interaction",
+            "tier_b_qty",
+            "tier_a_qty",
+            "zinc_cost",
+            "powder_cost",
+            "galvanized_cost",
+            "anodized_cost",
+            "paint_cost",
+            "precise_labor",
+            "high_precision_labor",
+            "waterjet_labor",
+            "volume_cubed",
+            "tier_c_qty",
+            "qty_cubed",
+            "sqrt_area",
+            "sqrt_volume",
+            "sqrt_qty",
+        }
+        
+        # Drop zero-importance features that exist in the DataFrame
+        features_to_drop = [f for f in zero_importance_features if f in X.columns]
+        if features_to_drop:
+            X = X.drop(columns=features_to_drop)
+        
         return X
