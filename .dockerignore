@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Data (don't include training data in production image)
+data/raw/
+data/interim/
+data/processed/
+
+# MLflow - exclude old runs to keep image smaller
+# We'll include only the latest run (84747ec1e1674f489e109917a8170b0c)
+# and the experiment metadata
+mlruns/*/0*/
+mlruns/*/0f2260a258f44f3f8a559d440efe92f2/
+mlruns/*/6484ac4987244a45b4a61affa7ec3a0a/
+mlruns/*/70973755887b45c382efac3b7e15da91/
+mlruns/*/11099a41a6cd427489cf477555d54ecf/
+mlruns/*/951508c479304dc2b23609bf7d66f8ef/
+mlruns/*/ad1436a8c43348e1a19cac61b852363e/
+mlruns/*/b5bab2a306034d0a955ee04d86e2578e/
+mlruns/*/e764d8699b1a4fe39314602b16b85e9b/
+# Keep models directory for registered models (if any)
+# mlruns/*/models/
+
+# Other
+*.csv
+!requirements.txt
+feature_importance.csv
+tests/
+# Exclude docker directory but keep entrypoint script
+docker/*
+!docker/entrypoint.sh
+

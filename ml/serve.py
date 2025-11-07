@@ -21,6 +21,15 @@ if not MODEL_URI:
     msg = "Set MODEL_URI (e.g., models:/mvp-lightgbm-price/Production or ./mlruns/.../model)"
     raise RuntimeError(msg)
 
+# Set MLflow tracking URI if not already set (needed for runs:/ URI format)
+if not os.getenv("MLFLOW_TRACKING_URI"):
+    # Try to find mlruns directory
+    mlruns_path = Path(__file__).parent.parent / "mlruns"
+    if mlruns_path.exists():
+        os.environ["MLFLOW_TRACKING_URI"] = f"file:{mlruns_path.absolute()}"
+        import mlflow
+        mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+
 
 # Response models
 class HealthResponse(BaseModel):

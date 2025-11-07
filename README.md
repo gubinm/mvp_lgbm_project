@@ -77,10 +77,58 @@ uvicorn ml.serve:app --host 0.0.0.0 --port 8000
 ```
 
 ## Docker
+### Quick Start
+
+**Build the Docker image:**
 ```bash
-docker build -t model-api .
-docker run -e MODEL_URI=models:/mvp-lightgbm-price/Production -p 8000:8000 model-api
+# Linux/Mac
+./docker/build.sh
+
+# Windows PowerShell
+.\docker\build.ps1
 ```
+
+**Run the container:**
+```bash
+# Linux/Mac
+./docker/run.sh
+
+# Windows PowerShell
+.\docker\run.ps1
+```
+
+The API will be available at `http://localhost:8000`
+
+### Quick Start
+
+**Build and run in one command:**
+```bash
+# Build
+docker build -t model-api .
+
+# Run (auto-detects latest model - no MODEL_URI needed!)
+docker run -p 8000:8000 model-api
+```
+
+That's it! The container automatically finds and loads the latest trained model.
+
+**Run with specific model (optional):**
+```bash
+# Using registered model path
+docker run -p 8000:8000 -e MODEL_URI=/app/mlruns/726614158927855195/models/m-<model_id>/artifacts model-api
+```
+
+**Using Docker Compose:**
+```bash
+docker-compose up --build
+```
+
+### Docker Features
+
+- **Automatic model detection**: If `MODEL_URI` is not set, the container will automatically find the latest trained model
+- **Health checks**: Built-in health check endpoint at `/healthz`
+- **Optimized image**: Only includes the latest model to keep image size small
+- **Production ready**: Includes proper error handling and logging
 
 ## Tests
 This project uses [pytest](https://docs.pytest.org/) for testing.

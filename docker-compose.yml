@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  model-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: model-api:latest
+    ports:
+      - "8000:8000"
+    environment:
+      # MODEL_URI will be auto-detected by the entrypoint script
+      # Or override it here: MODEL_URI: "/app/mlruns/.../artifacts"
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
