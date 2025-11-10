@@ -1,230 +1,182 @@
 # MVP LightGBM Price Project
 
-## Train
+Проект для предсказания цены единицы продукции с использованием модели LightGBM.
+
+## Обучение модели
+
+### Установка зависимостей
+
 ```bash
 pip install -r requirements.txt
-cd ml
-python train.py --csv ../data/raw/mvp_quotes.csv
 ```
-Env options:
+
+### Настройка переменных окружения
 
 **Linux/Mac (bash):**
 ```bash
 export MLFLOW_TRACKING_URI=file:./mlruns
 export MLFLOW_EXPERIMENT=mvp_lightgbm_price
-# Optional: export MLFLOW_REGISTER_MODEL=mvp-lightgbm-price
+# Опционально: export MLFLOW_REGISTER_MODEL=mvp-lightgbm-price
 ```
 
 **Windows (PowerShell):**
 ```powershell
 $env:MLFLOW_TRACKING_URI="file:./mlruns"
 $env:MLFLOW_EXPERIMENT="mvp_lightgbm_price"
-# Optional: $env:MLFLOW_REGISTER_MODEL="mvp-lightgbm-price"
+# Опционально: $env:MLFLOW_REGISTER_MODEL="mvp-lightgbm-price"
 ```
 
 **Windows (CMD):**
 ```cmd
 set MLFLOW_TRACKING_URI=file:./mlruns
 set MLFLOW_EXPERIMENT=mvp_lightgbm_price
-REM Optional: set MLFLOW_REGISTER_MODEL=mvp-lightgbm-price
+REM Опционально: set MLFLOW_REGISTER_MODEL=mvp-lightgbm-price
 ```
 
-## Serve
+### Запуск обучения
 
-**Linux/Mac (bash):**
 ```bash
-export MODEL_URI=runs:/0f2260a258f44f3f8a559d440efe92f2/model
-export MLFLOW_TRACKING_URI=file:./mlruns
-PYTHONPATH=. uvicorn ml.serve:app --host 0.0.0.0 --port 8000
+python -m ml.train --csv data/raw/mvp_quotes.csv
 ```
 
-**Windows (PowerShell):**
-```powershell
-$env:MODEL_URI="runs:/0f2260a258f44f3f8a559d440efe92f2/model"
-$env:MLFLOW_TRACKING_URI="file:./mlruns"
-$env:PYTHONPATH="."
-uvicorn ml.serve:app --host 0.0.0.0 --port 8000
-```
+#### Дополнительные параметры обучения
 
-**Windows (CMD):**
-```cmd
-set MODEL_URI=runs:/0f2260a258f44f3f8a559d440efe92f2/model
-set MLFLOW_TRACKING_URI=file:./mlruns
-set PYTHONPATH=.
-uvicorn ml.serve:app --host 0.0.0.0 --port 8000
-```
-
-Or via Registry:
-
-**Linux/Mac (bash):**
+**Настройка количества испытаний для подбора гиперпараметров:**
 ```bash
-export MODEL_URI=models:/mvp-lightgbm-price/Production
-PYTHONPATH=. uvicorn ml.serve:app --host 0.0.0.0 --port 8000
+python -m ml.train --csv data/raw/mvp_quotes.csv --trials 100
 ```
 
-**Windows (PowerShell):**
-```powershell
-$env:MODEL_URI="models:/mvp-lightgbm-price/Production"
-$env:PYTHONPATH="."
-uvicorn ml.serve:app --host 0.0.0.0 --port 8000
-```
-
-**Windows (CMD):**
-```cmd
-set MODEL_URI=models:/mvp-lightgbm-price/Production
-set PYTHONPATH=.
-uvicorn ml.serve:app --host 0.0.0.0 --port 8000
-```
-
-## Docker
-### Quick Start
-
-**Build the Docker image:**
+**Использование гиперпараметров из предыдущего запуска:**
 ```bash
-# Linux/Mac
+python -m ml.train --csv data/raw/mvp_quotes.csv --use-run-id <run_id>
+```
+
+После обучения модель будет сохранена в директории `mlruns/` с метриками (RMSE, MAE, MAPE, R²).
+
+## Сборка Docker-контейнера
+
+### Вариант 1: Использование скриптов (Рекомендуется)
+
+**Linux/Mac:**
+```bash
 ./docker/build.sh
+```
 
-# Windows PowerShell
+**Windows PowerShell:**
+```powershell
 .\docker\build.ps1
 ```
 
-**Run the container:**
-```bash
-# Linux/Mac
-./docker/run.sh
+### Вариант 2: Ручная сборка
 
-# Windows PowerShell
+```bash
+docker build -t model-api:latest .
+```
+
+### Вариант 3: Использование Docker Compose
+
+```bash
+docker-compose build
+```
+
+## Запуск Docker-контейнера
+
+### Вариант 1: Использование скриптов (Рекомендуется)
+
+**Linux/Mac:**
+```bash
+./docker/run.sh
+```
+
+**Windows PowerShell:**
+```powershell
 .\docker\run.ps1
 ```
 
-The API will be available at `http://localhost:8000`
+### Вариант 2: Ручной запуск
 
-### Quick Start
-
-**Build and run in one command:**
+**Автоматическое определение последней модели:**
 ```bash
-# Build
-docker build -t model-api .
-
-# Run (auto-detects latest model - no MODEL_URI needed!)
-docker run -p 8000:8000 model-api
+docker run -p 8000:8000 model-api:latest
 ```
 
-That's it! The container automatically finds and loads the latest trained model.
-
-**Run with specific model (optional):**
+**Указание конкретной модели:**
 ```bash
-# Using registered model path
-docker run -p 8000:8000 -e MODEL_URI=/app/mlruns/726614158927855195/models/m-<model_id>/artifacts model-api
+docker run -p 8000:8000 \
+  -e MODEL_URI="runs:/<run_id>/model" \
+  -e MLFLOW_TRACKING_URI="file:./mlruns" \
+  model-api:latest
 ```
 
-**Using Docker Compose:**
+### Вариант 3: Использование Docker Compose
+
+```bash
+docker-compose up
+```
+
+Или с пересборкой:
 ```bash
 docker-compose up --build
 ```
 
-### Docker Features
+### Проверка работы API
 
-- **Automatic model detection**: If `MODEL_URI` is not set, the container will automatically find the latest trained model
-- **Health checks**: Built-in health check endpoint at `/healthz`
-- **Optimized image**: Only includes the latest model to keep image size small
-- **Production ready**: Includes proper error handling and logging
+После запуска контейнера API будет доступен по адресу `http://localhost:8000`
 
-## Tests
-This project uses [pytest](https://docs.pytest.org/) for testing.
-
-Run all tests:
+**Проверка здоровья сервиса:**
 ```bash
-pytest tests/
+curl http://localhost:8000/healthz
 ```
 
-Run tests with verbose output:
+**Документация API:**
+Откройте в браузере: `http://localhost:8000/docs`
+
+**Пример запроса на предсказание:**
 ```bash
-pytest tests/ -v
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "rfq_id": 1,
+      "customer_tier": "A",
+      "material": "steel",
+      "thickness_mm": 5.0,
+      "length_mm": 1000.0,
+      "width_mm": 500.0,
+      "material_cost_rub": 1000.0,
+      "labor_minutes_per_unit": 10.0,
+      "labor_cost_rub": 500.0,
+      "qty": 10
+    }
+  ]'
 ```
 
-Run a specific test file:
-```bash
-pytest tests/test_pipeline.py
-```
+## Особенности Docker-контейнера
 
-## View MLFlow Metrics
+- **Автоматическое определение модели**: Если `MODEL_URI` не установлен, контейнер автоматически найдет последнюю обученную модель
+- **Проверка здоровья**: Встроенный эндпоинт для проверки здоровья на `/healthz`
+- **Оптимизированный образ**: Включает только последнюю модель для уменьшения размера образа
+- **Готовность к продакшену**: Включает обработку ошибок и логирование
 
-This project uses [MLFlow](https://www.mlflow.org/) to track model training metrics (RMSE, MAE, MAPE, R²).
+## Переменные окружения
 
-### Option 1: MLFlow UI (Recommended)
+- `MODEL_URI`: URI модели MLflow (например, `runs:/<run_id>/model`). Если не установлен, скрипт entrypoint попытается автоматически найти последнюю модель
+- `MLFLOW_TRACKING_URI`: URI для отслеживания MLflow (по умолчанию `file:./mlruns`)
+- `PYTHONPATH`: Установлен в `/app` по умолчанию
+- `PORT`: Внутренний порт (по умолчанию 8000)
 
-Start the MLFlow UI to view metrics in a web interface:
+## Устранение неполадок
 
-**Linux/Mac (bash):**
-```bash
-cd ml
-mlflow ui --backend-store-uri file:./mlruns
-```
+**Контейнер не запускается:**
+- Убедитесь, что директория `mlruns/` существует и содержит данные модели
+- Проверьте, что `MODEL_URI` установлен правильно или что скрипт entrypoint может найти модель
+- Проверьте логи контейнера: `docker logs <container_id>`
 
-**Windows (PowerShell):**
-```powershell
-cd ml
-mlflow ui --backend-store-uri file:./mlruns
-```
+**Модель не найдена:**
+- Убедитесь, что последний запуск модели включен в Docker-образ
+- Вручную установите переменную окружения `MODEL_URI`
 
-Then open your browser to: `http://localhost:5000`
+**Порт уже используется:**
+- Измените маппинг порта: `docker run -p 8001:8000 ...`
+- Или остановите существующий контейнер, использующий порт 8000
 
-### Option 2: Command Line Script
-
-View metrics from the command line:
-
-**Linux/Mac (bash):**
-```bash
-python ml/view_metrics.py
-# Or if using venv:
-./venv/bin/python ml/view_metrics.py
-```
-
-**Windows (PowerShell):**
-```powershell
-.\venv\Scripts\python.exe ml/view_metrics.py
-```
-
-### Option 3: Programmatic Access
-
-Access metrics programmatically using the MLFlow API:
-
-```python
-import mlflow
-import os
-
-mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", "file:./mlruns"))
-experiment = mlflow.get_experiment_by_name("mvp_lightgbm_price")
-runs = mlflow.search_runs(experiment_ids=[experiment.experiment_id])
-
-# Get latest run metrics
-latest_run = runs.iloc[0]
-print(f"RMSE: {latest_run['metrics.rmse']:.3f}")
-print(f"MAE: {latest_run['metrics.mae']:.3f}")
-print(f"MAPE: {latest_run['metrics.mape']:.2f}%")
-print(f"R²: {latest_run['metrics.r2']:.3f}")
-```
-
-## Linting
-This project uses [Ruff](https://docs.astral.sh/ruff/) for linting and code formatting.
-
-Check for linting issues:
-```bash
-ruff check ml/
-```
-
-Auto-fix linting issues:
-```bash
-ruff check --fix ml/
-```
-
-Format code:
-```bash
-ruff format ml/
-```
-
-Check and format in one command:
-```bash
-ruff check --fix ml/ && ruff format ml/
-```

@@ -32,14 +32,14 @@ def find_latest_model():
         Path("mlruns"),
         Path("ml/mlruns"),
     ]
-    
+
     # First, try using MLflow API to find the latest run
     tracking_uri = None
     for base_path in possible_paths:
         if base_path.exists():
             tracking_uri = f"file:{base_path.absolute()}"
             break
-    
+
     if tracking_uri:
         try:
             mlflow.set_tracking_uri(tracking_uri)
@@ -69,20 +69,20 @@ def find_latest_model():
         except Exception:
             # Fall back to file system search if MLflow API fails
             pass
-    
+
     # Fallback: search file system for latest run
     latest_run = None
     latest_end_time = 0
-    
+
     for base_path in possible_paths:
         if not base_path.exists():
             continue
-            
+
         # Look for experiment directories
         for exp_dir in base_path.iterdir():
             if not exp_dir.is_dir() or exp_dir.name == "0":
                 continue
-                
+
             # Check run directories first (prioritize actual runs over registered models)
             for run_dir in exp_dir.iterdir():
                 if not run_dir.is_dir() or run_dir.name == "models" or run_dir.name == "meta.yaml":
@@ -97,7 +97,7 @@ def find_latest_model():
                             if end_time and end_time > latest_end_time:
                                 latest_end_time = end_time
                                 latest_run = str(artifacts_dir)
-            
+
             # Check models directory as fallback
             runs_dir = exp_dir / "models"
             if runs_dir.exists():
@@ -113,13 +113,13 @@ def find_latest_model():
                                 if creation_time > latest_end_time:
                                     latest_end_time = creation_time
                                     latest_run = str(artifacts_dir)
-    
+
     if latest_run is None:
         raise RuntimeError(
             "No trained model found. Please train a model first using: "
             "python -m ml.train --csv data/raw/mvp_quotes.csv"
         )
-    
+
     return latest_run
 
 
@@ -134,24 +134,24 @@ def trained_model():
 def app_with_model():
     """Create a FastAPI app instance with the actual trained model."""
     model_path = find_latest_model()
-    
+
     # Set MODEL_URI and PYTHONPATH before importing ml.serve
     import os
     import sys
     original_uri = os.environ.get("MODEL_URI")
     original_pythonpath = os.environ.get("PYTHONPATH")
-    
+
     # Add ml directory to Python path so relative imports work
     ml_dir = str(Path(__file__).parent.parent / "ml")
     if ml_dir not in sys.path:
         sys.path.insert(0, ml_dir)
-    
+
     os.environ["MODEL_URI"] = model_path
     if original_pythonpath:
         os.environ["PYTHONPATH"] = f"{ml_dir}{os.pathsep}{original_pythonpath}"
     else:
         os.environ["PYTHONPATH"] = ml_dir
-    
+
     try:
         # Import and create app - this will load the model
         import ml.serve
@@ -164,12 +164,12 @@ def app_with_model():
             os.environ["MODEL_URI"] = original_uri
         elif "MODEL_URI" in os.environ:
             del os.environ["MODEL_URI"]
-        
+
         if original_pythonpath is not None:
             os.environ["PYTHONPATH"] = original_pythonpath
         elif "PYTHONPATH" in os.environ:
             del os.environ["PYTHONPATH"]
-        
+
         # Remove ml_dir from sys.path if we added it
         if ml_dir in sys.path:
             sys.path.remove(ml_dir)
